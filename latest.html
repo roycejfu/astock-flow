@@ -1,0 +1,851 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>A股资金流向 Dashboard | 2026-08-13</title>
+<script src="https://cdn.jsdelivr.net/npm/echarts@5.5.0/dist/echarts.min.js"></script>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body { font-family: -apple-system, BlinkMacSystemFont, 'PingFang SC', 'Microsoft YaHei', sans-serif; background: #f0f2f5; color: #1a1a2e; padding: 20px; }
+.header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; }
+.header h1 { font-size: 24px; font-weight: 700; color: #1a1a2e; }
+.header .meta { font-size: 13px; color: #888; }
+.header .meta span { margin-left: 16px; }
+.header .update-badge { background: #fff1f0; color: #cf1322; font-size: 12px; padding: 2px 10px; border-radius: 10px; margin-left: 8px; }
+
+.cards-row { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-bottom: 16px; }
+.cards-row-5 { display: grid; grid-template-columns: repeat(5, 1fr); gap: 12px; margin-bottom: 16px; }
+.index-card { background: #fff; border-radius: 10px; padding: 16px; box-shadow: 0 1px 4px rgba(0,0,0,0.06); position: relative; overflow: hidden; }
+.index-card .name { font-size: 13px; color: #888; margin-bottom: 6px; }
+.index-card .price { font-size: 24px; font-weight: 700; color: #1a1a2e; margin-bottom: 4px; }
+.index-card .change { font-size: 14px; font-weight: 600; }
+.index-card .vol { font-size: 11px; color: #999; margin-top: 6px; }
+.index-card .pe { font-size: 11px; color: #aaa; margin-top: 2px; }
+.index-card.global .price { font-size: 18px; }
+.up { color: #cf1322; }
+.down { color: #389e0d; }
+
+.section { margin-bottom: 16px; }
+.section-title { font-size: 16px; font-weight: 700; color: #1a1a2e; margin-bottom: 10px; padding-left: 10px; border-left: 3px solid #1677ff; }
+.section-subtitle { font-size: 13px; color: #888; margin: -6px 0 10px 10px; }
+
+.charts-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.charts-row-3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; }
+.chart-box { background: #fff; border-radius: 10px; padding: 16px; box-shadow: 0 1px 4px rgba(0,0,0,0.06); }
+.chart-box.full { grid-column: 1 / -1; }
+.chart-box h3 { font-size: 14px; font-weight: 600; color: #333; margin-bottom: 8px; }
+.chart-box-sm { min-height: 220px; }
+
+.fund-metrics { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-bottom: 16px; }
+.metric-card { background: #fff; border-radius: 10px; padding: 16px; box-shadow: 0 1px 4px rgba(0,0,0,0.06); text-align: center; }
+.metric-card .label { font-size: 12px; color: #999; margin-bottom: 8px; }
+.metric-card .value { font-size: 22px; font-weight: 700; margin-bottom: 4px; }
+.metric-card .sub { font-size: 11px; color: #aaa; }
+.metric-card.warn { border-left: 3px solid #fa8c16; }
+.metric-card.good { border-left: 3px solid #52c41a; }
+.metric-card.bad { border-left: 3px solid #cf1322; }
+.metric-card.info { border-left: 3px solid #1677ff; }
+
+.analysis-panel { background: #fff; border-radius: 10px; padding: 20px; box-shadow: 0 1px 4px rgba(0,0,0,0.06); margin-bottom: 16px; }
+.analysis-panel h3 { font-size: 15px; font-weight: 700; color: #1a1a2e; margin-bottom: 14px; }
+.analysis-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+.analysis-col h4 { font-size: 13px; font-weight: 600; color: #555; margin-bottom: 10px; padding-bottom: 6px; border-bottom: 1px solid #f0f0f0; }
+.analysis-item { display: flex; justify-content: space-between; align-items: center; padding: 7px 0; font-size: 13px; border-bottom: 1px dashed #f5f5f5; }
+.analysis-item .tag { font-size: 11px; padding: 2px 8px; border-radius: 4px; font-weight: 500; }
+.tag-red { background: #fff1f0; color: #cf1322; }
+.tag-green { background: #f6ffed; color: #389e0d; }
+.tag-orange { background: #fff7e6; color: #d46b08; }
+.tag-blue { background: #e6f7ff; color: #096dd9; }
+.tag-gray { background: #f5f5f5; color: #666; }
+.analysis-item .val { font-weight: 600; }
+
+.signal-bar { display: flex; align-items: center; gap: 12px; margin: 10px 0; }
+.signal-bar .bar-track { flex: 1; height: 8px; border-radius: 4px; background: #f0f0f0; overflow: hidden; }
+.signal-bar .bar-fill { height: 100%; border-radius: 4px; transition: width 0.3s; }
+.signal-bar .bar-label { font-size: 11px; color: #888; white-space: nowrap; min-width: 70px; }
+
+.table-box { background: #fff; border-radius: 10px; padding: 16px; box-shadow: 0 1px 4px rgba(0,0,0,0.06); overflow-x: auto; }
+table { width: 100%; border-collapse: collapse; font-size: 13px; }
+thead th { background: #fafafa; color: #666; font-weight: 600; padding: 10px 8px; text-align: right; border-bottom: 2px solid #e8e8e8; position: sticky; top: 0; white-space: nowrap; }
+thead th:first-child { text-align: left; }
+tbody td { padding: 9px 8px; text-align: right; border-bottom: 1px solid #f0f0f0; white-space: nowrap; }
+tbody td:first-child { text-align: left; font-weight: 500; }
+tbody tr:hover { background: #f5f7fa; }
+.inflow { color: #cf1322; font-weight: 500; }
+.outflow { color: #389e0d; font-weight: 500; }
+
+.legend-row { display: flex; gap: 20px; margin-top: 8px; font-size: 12px; color: #888; flex-wrap: wrap; }
+.legend-item { display: flex; align-items: center; gap: 4px; }
+.legend-dot { width: 10px; height: 10px; border-radius: 2px; }
+
+@media (max-width: 1100px) {
+  .cards-row-5 { grid-template-columns: repeat(3, 1fr); }
+  .fund-metrics { grid-template-columns: repeat(2, 1fr); }
+  .analysis-grid { grid-template-columns: 1fr; }
+  .charts-row-3 { grid-template-columns: 1fr; }
+}
+@media (max-width: 900px) {
+  .cards-row { grid-template-columns: repeat(2, 1fr); }
+  .charts-row { grid-template-columns: 1fr; }
+}
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div>
+    <h1>A股资金流向 Dashboard</h1>
+    <div class="meta">
+      2026-08-13 周四 收盘 <span class="update-badge">冲高回落·放量分歧</span>
+      <span>数据来源：腾讯自选股 / 公开市场数据 | 医药独强·有色崩塌·成交2.55万亿</span>
+    </div>
+  </div>
+</div>
+
+<!-- Key Fund Heat Metrics -->
+<div class="fund-metrics">
+  <div class="metric-card bad">
+    <div class="label">主力资金净流向（今日）</div>
+    <div class="value outflow">-440 亿</div>
+    <div class="sub">超大单 -295亿 | 大单 -145亿 | 中单 +225亿</div>
+  </div>
+  <div class="metric-card info">
+    <div class="label">北向资金成交</div>
+    <div class="value" style="color:#1677ff;">3,148 亿</div>
+    <div class="sub">占两市12.34% | 光模块成交居前</div>
+  </div>
+  <div class="metric-card warn">
+    <div class="label">今日涨跌比</div>
+    <div class="value" style="color:#389e0d;">1,143 / 4,317</div>
+    <div class="sub">涨停62家 | 跌停4家 | 赚钱效应20%</div>
+  </div>
+  <div class="metric-card warn">
+    <div class="label">全市场成交额</div>
+    <div class="value" style="color:#d46b08;">25,500 亿</div>
+    <div class="sub">放量 3,985亿 | 沪深京三市2.57万亿</div>
+  </div>
+</div>
+
+<!-- Global Markets -->
+<div class="section">
+  <div class="section-title">外围市场全景</div>
+  <div class="cards-row-5">
+    <div class="index-card global">
+      <div class="name">隔夜美股 <span style="font-size:10px;color:#999;">周三 08/12</span></div>
+      <div class="price">标普500 7,748.50</div>
+      <div class="change up">+0.26% CPI符合预期</div>
+      <div class="vol">纳指 +0.54% | 道指 -0.04%</div>
+    </div>
+    <div class="index-card global">
+      <div class="name">美股科技 <span style="font-size:10px;color:#999;">隔夜</span></div>
+      <div class="price">费半 +2.5%</div>
+      <div class="change up">英伟达 +3%</div>
+      <div class="vol">SK海力士+9% | 中国金龙-2.4%</div>
+    </div>
+    <div class="index-card global">
+      <div class="name">恒生指数 <span style="font-size:10px;color:#999;">今日 08/13</span></div>
+      <div class="price">25,396.51</div>
+      <div class="change down">-0.17%</div>
+      <div class="vol">腾讯 -4.46% | 联想 +20.18%</div>
+    </div>
+    <div class="index-card global">
+      <div class="name">日韩市场 <span style="font-size:10px;color:#999;">周三 08/12</span></div>
+      <div class="price">KOSPI +3.68%</div>
+      <div class="change up">日经225 +0.83%</div>
+      <div class="vol">韩股强势反弹 | 重返牛市</div>
+    </div>
+    <div class="index-card global">
+      <div class="name">商品 <span style="font-size:10px;color:#999;">周三收盘</span></div>
+      <div class="price" style="font-size:16px;">现货金 $4,408</div>
+      <div class="change up">+0.93% 两月新高</div>
+      <div class="vol">WTI $82.6 | Brent $88.4</div>
+    </div>
+  </div>
+</div>
+
+<!-- Index Cards -->
+<div class="cards-row">
+  <div class="index-card">
+    <div class="name">上证指数 <span style="font-size:10px;color:#888;">收盘 08/13</span></div>
+    <div class="price">3,926.96</div>
+    <div class="change down">-0.50%</div>
+    <div class="vol">成交额 11,642 亿</div>
+    <div class="pe">高开低走 | 尾盘跳水翻绿</div>
+  </div>
+  <div class="index-card">
+    <div class="name">深证成指 <span style="font-size:10px;color:#888;">收盘 08/13</span></div>
+    <div class="price">14,289.44</div>
+    <div class="change down">-0.87%</div>
+    <div class="vol">成交额 13,867 亿</div>
+    <div class="pe">创阶段新高后回落 | 跌幅居前</div>
+  </div>
+  <div class="index-card">
+    <div class="name">创业板指 <span style="font-size:10px;color:#888;">收盘 08/13</span></div>
+    <div class="price">3,586.04</div>
+    <div class="change down">-0.45%</div>
+    <div class="vol">成交额 6,615 亿</div>
+    <div class="pe">早盘涨超2% | 3600点得而复失</div>
+  </div>
+  <div class="index-card">
+    <div class="name">科创50 <span style="font-size:10px;color:#888;">收盘 08/13</span></div>
+    <div class="price">1,717.75</div>
+    <div class="change down">-1.11%</div>
+    <div class="vol">成交额 1,257 亿</div>
+    <div class="pe">高开低走 | 半导体存储承压</div>
+  </div>
+</div>
+
+<!-- Charts Row 1: Index Fund Flow + Sector Overview -->
+<div class="charts-row">
+  <div class="chart-box">
+    <h3>主要指数资金流向（按单类拆分·估算）</h3>
+    <div id="chart-fundflow" style="height:360px;"></div>
+    <div class="legend-row">
+      <div class="legend-item"><span class="legend-dot" style="background:#cf1322;"></span> 超大单</div>
+      <div class="legend-item"><span class="legend-dot" style="background:#fa8c16;"></span> 大单</div>
+      <div class="legend-item"><span class="legend-dot" style="background:#1677ff;"></span> 中单</div>
+      <div class="legend-item"><span class="legend-dot" style="background:#52c41a;"></span> 小单</div>
+    </div>
+  </div>
+  <div class="chart-box">
+    <h3>行业板块涨跌幅 vs 主力资金净流入</h3>
+    <div id="chart-scatter" style="height:360px;"></div>
+  </div>
+</div>
+
+<!-- Charts Row 2: Fund Flow Heat Analysis -->
+<div class="section">
+  <div class="charts-row">
+    <div class="chart-box">
+      <h3>全市场资金流向结构（估算）</h3>
+      <div id="chart-marketflow" style="height:340px;"></div>
+    </div>
+    <div class="chart-box">
+      <h3>外围市场联动：全球股指日内表现</h3>
+      <div id="chart-global" style="height:340px;"></div>
+    </div>
+  </div>
+</div>
+
+<!-- Charts Row 3: Sector heatmap -->
+<div class="section">
+  <div class="chart-box full">
+    <h3>行业板块热度 & 资金流向全景</h3>
+    <div id="chart-heat" style="height:400px;"></div>
+  </div>
+</div>
+
+<!-- Analysis Panel -->
+<div class="section">
+  <div class="section-title">综合研判 & 资金热力解读</div>
+  <div class="analysis-panel">
+    <div class="analysis-grid">
+      <div class="analysis-col">
+        <h4>外围市场影响</h4>
+        <div class="analysis-item">
+          <span>美股CPI</span>
+          <span><span class="tag tag-blue">符合预期</span> 7月CPI 3.4%/核心2.5%，加息压力缓解</span>
+        </div>
+        <div class="analysis-item">
+          <span>美债/美元</span>
+          <span><span class="tag tag-orange">压力</span> 10Y美债4.68%创2007年来新高，美元指数破100</span>
+        </div>
+        <div class="analysis-item">
+          <span>隔夜美股</span>
+          <span class="val up">标普+0.26% | 纳指+0.54%，AI算力链领涨</span>
+        </div>
+        <div class="analysis-item">
+          <span>港股</span>
+          <span class="val down">恒指-0.17%，腾讯绩后-4.46%但北水逆势买入56亿</span>
+        </div>
+        <div class="analysis-item">
+          <span>日韩</span>
+          <span class="val up">KOSPI +3.68% | 日经225 +0.83%</span>
+        </div>
+        <div class="analysis-item">
+          <span>黄金/原油</span>
+          <span><span class="tag tag-red">金强油弱</span> 现货金+0.93%报4408，WTI -0.75%</span>
+        </div>
+        <div class="analysis-item">
+          <span>政策面</span>
+          <span><span class="tag tag-red">重磅</span> 央行晚间等量续作1万亿买断式逆回购</span>
+        </div>
+      </div>
+      <div class="analysis-col">
+        <h4>场内资金热度判断</h4>
+        <div class="analysis-item">
+          <span>整体资金面</span>
+          <span><span class="tag tag-green">大幅流出</span> 主力净流出440亿，放量分歧加剧</span>
+        </div>
+        <div class="analysis-item">
+          <span>超大单 vs 中单</span>
+          <span><span class="tag tag-orange">派发</span> 超大单-295亿，中单承接+225亿</span>
+        </div>
+        <div class="analysis-item">
+          <span>主线切换</span>
+          <span><span class="tag tag-red">高低切换</span> 有色→医药/电力/大金融</span>
+        </div>
+        <div class="analysis-item">
+          <span>医药生物</span>
+          <span><span class="tag tag-red">断层第一</span> 主力净流入116亿，连续5日净流入</span>
+        </div>
+        <div class="analysis-item">
+          <span>电子/半导体</span>
+          <span><span class="tag tag-green">大幅流出</span> 电子-245亿 | 半导体-88.8亿</span>
+        </div>
+        <div class="analysis-item">
+          <span>有色/贵金属</span>
+          <span><span class="tag tag-green">崩塌</span> 贵金属-5.29% | 有色净流出91亿</span>
+        </div>
+        <div class="analysis-item">
+          <span>电力/电网</span>
+          <span><span class="tag tag-red">逆势拉升</span> 电力净流入36.6亿 | 大唐发电涨停</span>
+        </div>
+      </div>
+    </div>
+
+    <div style="margin-top:16px; padding-top:14px; border-top:1px solid #f0f0f0;">
+      <h4 style="font-size:13px; font-weight:600; color:#555; margin-bottom:10px;">核心结论</h4>
+      <div style="font-size:13px; color:#666; line-height:1.8;">
+        <p><b>1. 冲高回落、放量分歧：创业板早盘涨超2%尾盘集体翻绿。</b>今日A股三大指数高开冲高后午后跳水集体收跌——上证-0.50%报3926.96、深成指-0.87%、创业板-0.45%（早盘一度+2%）、科创50-1.11%。两市成交2.55万亿放量3985亿，但全市场超4300股下跌、涨停62家跌停4家、赚钱效应仅20%——放量滞涨+普跌格局，短线资金在指数高位剧烈分歧，获利盘集中兑现。</p>
+        <p style="margin-top:6px;"><b>2. 医药独强成绝对主线：主力净流入116亿断层第一。</b>医疗服务+3.99%、CRO+4.31%、生物制品+2.00%、化学制药+1.38%，医药生物连续5日净流入合计566亿。催化在于创新药BD交易热度延续（8月10日单日三起重磅交易）+药明康德获美法院初步禁令豁免1260H名单+板块估值低位防御属性。博济医药、陇神戎发、万邦医药20CM涨停，誉衡药业5天4板。资金抱团防御的避险信号明显。</p>
+        <p style="margin-top:6px;"><b>3. 有色全线崩塌，电子大幅失血——高低切换极致演绎。</b>贵金属-5.29%、工业金属-4.20%、小金属-3.06%集体重挫，天山铝业-7.57%、中孚实业-6.70%、宏桥控股-6.94%；电子净流出245亿（半导体-88.8亿、消费电子-28.9亿）。前一日强势的高位赛道遭集中兑现，资金转向电力（净流入36.6亿，大唐发电等涨停，电网"十五五"规划投资5万亿+）、银行、大金融防御方向，以及算力租赁/超节点（净流入47亿/52亿）等确定性题材。</p>
+        <p style="margin-top:6px;"><b>4. 外围与政策：CPI落地利好对冲美债利率高企，央行深夜放水稳定预期。</b>隔夜美国7月CPI符合预期（3.4%/核心2.5%），9月加息概率回落至40%，标普/纳指收涨、费半+2.5%；但10年期美债收益率4.68%创2007年来新高、美元指数破100压制风险资产。盘后央行等量续作1万亿元买断式逆回购大超券商预期，流动性宽松基调延续。短期A股处于"指数高位震荡+结构性轮动"格局，医药的持续性、有色止跌信号及明日资金承接力度是观察重点；腾讯绩后大跌4.46%但北水逆势买入56亿港元，港股科技调整或提供中线布局窗口。</p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Detailed Table -->
+<div class="section">
+  <div class="section-title">行业板块资金流向明细</div>
+  <div class="table-box">
+    <table>
+      <thead>
+        <tr>
+          <th>板块名称</th>
+          <th>涨跌幅</th>
+          <th>5日涨跌</th>
+          <th>20日涨跌</th>
+          <th>换手率</th>
+          <th>主力净流入(亿)</th>
+          <th>热度</th>
+          <th>资金信号</th>
+        </tr>
+      </thead>
+      <tbody id="table-body"></tbody>
+    </table>
+  </div>
+</div>
+
+<script>
+var UP_COLOR = '#cf1322';
+var DOWN_COLOR = '#389e0d';
+
+// ========== Data ==========
+var sectorData = [
+  { name: '医疗服务', chg: 3.99, chg5: 19.59, chg20: 27.15, turnover: 5.54, flow: 16.34, heat: 8500 },
+  { name: '生物制品', chg: 2.00, chg5: 11.28, chg20: 8.69, turnover: 2.57, flow: 5.00, heat: 6000 },
+  { name: 'CRO', chg: 4.31, chg5: 23.09, chg20: 14.77, turnover: 8.13, flow: 8.00, heat: 7500 },
+  { name: '创新药', chg: 1.84, chg5: 8.00, chg20: 15.00, turnover: 3.00, flow: 37.45, heat: 8000 },
+  { name: '化学制药', chg: 1.38, chg5: 8.02, chg20: 7.04, turnover: 2.50, flow: 5.00, heat: 5500 },
+  { name: '中药Ⅱ', chg: 1.59, chg5: 4.62, chg20: 10.94, turnover: 3.93, flow: 4.00, heat: 5200 },
+  { name: '医药生物', chg: 1.13, chg5: 6.00, chg20: 10.00, turnover: 2.50, flow: 116.00, heat: 9000 },
+  { name: '证券Ⅱ', chg: 0.45, chg5: 0.53, chg20: -1.67, turnover: 2.00, flow: 10.00, heat: 6500 },
+  { name: '国有大型银行Ⅱ', chg: 1.16, chg5: 0.95, chg20: 3.00, turnover: 0.17, flow: 12.96, heat: 5800 },
+  { name: '电力', chg: 0.55, chg5: 1.72, chg20: 4.39, turnover: 1.50, flow: 36.61, heat: 9000 },
+  { name: '电网设备', chg: -0.51, chg5: 1.00, chg20: -5.00, turnover: 3.50, flow: 8.00, heat: 6000 },
+  { name: '通信设备', chg: 0.39, chg5: 2.90, chg20: -6.69, turnover: 4.30, flow: 9.52, heat: 7000 },
+  { name: '白酒Ⅱ', chg: 0.73, chg5: 1.50, chg20: 5.00, turnover: 1.20, flow: 3.00, heat: 4500 },
+  { name: '算力租赁', chg: 1.60, chg5: 2.00, chg20: 5.00, turnover: 3.50, flow: 47.02, heat: 7200 },
+  { name: '超节点', chg: 1.60, chg5: 2.00, chg20: 8.00, turnover: 3.00, flow: 52.00, heat: 6800 },
+  { name: '半导体', chg: -1.47, chg5: 3.29, chg20: -22.87, turnover: 3.80, flow: -88.83, heat: 8200 },
+  { name: '电子', chg: -1.43, chg5: 3.00, chg20: -15.00, turnover: 3.50, flow: -245.00, heat: 8800 },
+  { name: '消费电子', chg: -1.20, chg5: 2.42, chg20: -8.36, turnover: 3.50, flow: -28.92, heat: 6200 },
+  { name: '元件', chg: -1.51, chg5: 5.93, chg20: -16.27, turnover: 4.00, flow: -47.70, heat: 6000 },
+  { name: '光学光电子', chg: -1.50, chg5: -2.00, chg20: -12.00, turnover: 2.50, flow: -8.00, heat: 4500 },
+  { name: 'IT服务Ⅱ', chg: -1.31, chg5: -1.02, chg20: 2.04, turnover: 3.00, flow: -8.00, heat: 4800 },
+  { name: '软件开发', chg: -1.47, chg5: -3.67, chg20: 5.91, turnover: 3.00, flow: -10.00, heat: 5000 },
+  { name: '贵金属', chg: -5.29, chg5: -0.07, chg20: 18.51, turnover: 4.50, flow: -30.00, heat: 7800 },
+  { name: '工业金属', chg: -4.20, chg5: -0.81, chg20: 0.05, turnover: 2.67, flow: -59.27, heat: 7200 },
+  { name: '小金属', chg: -3.06, chg5: 0.37, chg20: -14.57, turnover: 4.04, flow: -47.51, heat: 6800 },
+  { name: '能源金属', chg: -1.51, chg5: -1.00, chg20: -15.00, turnover: 5.04, flow: -8.00, heat: 5200 },
+  { name: '电池', chg: -1.46, chg5: 1.51, chg20: -13.49, turnover: 2.80, flow: -5.00, heat: 5000 },
+  { name: '光伏设备', chg: -2.07, chg5: 1.61, chg20: -9.97, turnover: 2.13, flow: -15.70, heat: 5800 },
+  { name: '房地产', chg: -2.26, chg5: 2.47, chg20: 7.00, turnover: 2.50, flow: -8.00, heat: 4800 },
+  { name: '教育', chg: -3.14, chg5: 0.04, chg20: 17.26, turnover: 3.00, flow: -3.00, heat: 4000 },
+  { name: '影视院线', chg: -1.95, chg5: 4.43, chg20: 10.44, turnover: 4.00, flow: -5.00, heat: 4500 }
+];
+
+var stockDetailsMap = {
+  '医药生物': [
+    { name: '药明康德', chg: 2.07, flow: 15.00 },
+    { name: '博济医药', chg: 20.02, flow: 3.00 },
+    { name: '万邦医药', chg: 20.00, flow: 2.50 },
+    { name: '誉衡药业', chg: 10.10, flow: 1.80 },
+    { name: '亚泰集团', chg: 10.19, flow: 1.20 }
+  ],
+  '医疗服务': [
+    { name: '博济医药', chg: 20.02, flow: 3.00 },
+    { name: '陇神戎发', chg: 19.97, flow: 1.50 },
+    { name: '兰卫医学', chg: 20.00, flow: 1.20 },
+    { name: '近岸蛋白', chg: 20.01, flow: 0.80 },
+    { name: '药石科技', chg: 8.00, flow: 1.00 }
+  ],
+  '电力': [
+    { name: '大唐发电', chg: 10.02, flow: 8.00 },
+    { name: '京能电力', chg: 10.00, flow: 4.00 },
+    { name: '华电辽能', chg: 9.02, flow: 2.50 },
+    { name: '梅雁吉祥', chg: 9.47, flow: 2.00 },
+    { name: '惠天热电', chg: 10.00, flow: 1.50 }
+  ],
+  '通信设备': [
+    { name: '中际旭创', chg: 0.00, flow: 8.00 },
+    { name: '新易盛', chg: 0.40, flow: 5.00 },
+    { name: '天孚通信', chg: 7.13, flow: 10.00 },
+    { name: '紫光股份', chg: 7.03, flow: 27.00 },
+    { name: '锐捷网络', chg: 13.52, flow: 3.50 }
+  ],
+  '半导体': [
+    { name: '兆易创新', chg: -2.10, flow: -6.00 },
+    { name: '长鑫科技', chg: -1.20, flow: -5.00 },
+    { name: '北方华创', chg: -2.82, flow: -4.00 },
+    { name: '长电科技', chg: -0.46, flow: -2.50 },
+    { name: '寒武纪', chg: 0.01, flow: -3.00 }
+  ],
+  '贵金属': [
+    { name: '晓程科技', chg: -8.99, flow: -4.00 },
+    { name: '招金黄金', chg: -8.00, flow: -3.50 },
+    { name: '湖南白银', chg: -7.00, flow: -3.00 },
+    { name: '紫金矿业', chg: -4.08, flow: -8.00 },
+    { name: '中金黄金', chg: -4.00, flow: -2.50 }
+  ],
+  '工业金属': [
+    { name: '天山铝业', chg: -7.57, flow: -5.00 },
+    { name: '中孚实业', chg: -6.70, flow: -4.00 },
+    { name: '宏桥控股', chg: -6.94, flow: -3.50 },
+    { name: '云铝股份', chg: -5.79, flow: -3.00 },
+    { name: '中国铝业', chg: -5.53, flow: -4.50 }
+  ],
+  '小金属': [
+    { name: '西部材料', chg: 5.31, flow: 1.50 },
+    { name: '北方稀土', chg: -2.40, flow: -3.00 },
+    { name: '中国稀土', chg: -2.07, flow: -2.00 },
+    { name: '云南锗业', chg: -5.44, flow: -2.50 },
+    { name: '华锡有色', chg: -1.47, flow: -1.00 }
+  ],
+  '光伏设备': [
+    { name: '阳光电源', chg: 0.51, flow: 3.00 },
+    { name: '隆基绿能', chg: -3.35, flow: -4.00 },
+    { name: '通威股份', chg: -4.45, flow: -3.00 },
+    { name: '晶澳科技', chg: -4.03, flow: -2.50 },
+    { name: '艾罗能源', chg: -5.77, flow: -1.50 }
+  ],
+  '算力租赁': [
+    { name: '城地香江', chg: 10.00, flow: 3.00 },
+    { name: '共进股份', chg: 10.00, flow: 2.50 },
+    { name: '群兴玩具', chg: 10.00, flow: 1.80 },
+    { name: '浪潮信息', chg: 5.92, flow: 5.00 },
+    { name: '中科曙光', chg: 3.00, flow: 4.00 }
+  ],
+  '电子': [
+    { name: '紫光股份', chg: 7.03, flow: 27.00 },
+    { name: '风华高科', chg: -6.75, flow: -8.00 },
+    { name: '立讯精密', chg: -1.00, flow: -5.00 },
+    { name: '工业富联', chg: -0.56, flow: -4.00 },
+    { name: '生益科技', chg: -1.04, flow: -6.00 }
+  ],
+  '证券Ⅱ': [
+    { name: '财通证券', chg: 7.00, flow: 3.00 },
+    { name: '长江证券', chg: 2.00, flow: 1.50 },
+    { name: '天风证券', chg: 1.50, flow: 1.00 },
+    { name: '光大证券', chg: 1.00, flow: 0.80 },
+    { name: '中信证券', chg: 0.50, flow: 2.00 }
+  ]
+};
+
+function getStockTooltipHTML(sectorName) {
+  var stocks = stockDetailsMap[sectorName];
+  if (!stocks || stocks.length === 0) return '';
+  var html = '<div style="margin-top:8px;padding-top:6px;border-top:1px solid #eee;font-size:11px;">';
+  html += '<div style="color:#999;margin-bottom:4px;">代表个股资金流：</div>';
+  stocks.forEach(function(s) {
+    var cls = s.chg > 0 ? 'color:#cf1322;' : 'color:#389e0d;';
+    var flowStr = s.flow != null ? ' ｜ ' + (s.flow > 0 ? '+' : '') + s.flow.toFixed(2) + '亿' : '';
+    html += '<div style="padding:2px 0;">' +
+      '<span style="font-weight:500;">' + s.name + '</span>' +
+      '<span style="margin-left:8px;' + cls + '">' + (s.chg > 0 ? '+' : '') + s.chg.toFixed(2) + '%</span>' +
+      '<span style="color:#666;">' + flowStr + '</span>' +
+      '</div>';
+  });
+  html += '</div>';
+  return html;
+}
+
+var idxFlow = [
+  { name: '上证指数', superLarge: -100, large: -50, medium: 75, small: 75 },
+  { name: '深证成指', superLarge: -120, large: -60, medium: 90, small: 90 },
+  { name: '创业板指', superLarge: -45, large: -20, medium: 35, small: 30 },
+  { name: '科创50', superLarge: -30, large: -15, medium: 25, small: 20 }
+];
+
+function formatFlow(v) {
+  if (v == null) return '--';
+  var sign = v > 0 ? '+' : '';
+  return sign + v.toFixed(2) + '亿';
+}
+function formatPct(v) {
+  if (v == null) return '--';
+  var sign = v > 0 ? '+' : '';
+  return sign + v.toFixed(2) + '%';
+}
+function flowColor(v) {
+  if (v == null) return '#999';
+  return v > 0 ? UP_COLOR : DOWN_COLOR;
+}
+
+// ========== Chart 1: Index Fund Flow ==========
+(function() {
+  var dom = document.getElementById('chart-fundflow');
+  var chart = echarts.init(dom);
+  var option = {
+    tooltip: {
+      trigger: 'axis',
+      axisPointer: { type: 'shadow' },
+      formatter: function(params) {
+        var s = '<b>' + params[0].name + '</b><br/>';
+        params.forEach(function(p) {
+          s += p.marker + ' ' + p.seriesName + ': ' + p.value.toFixed(2) + ' 亿<br/>';
+        });
+        return s;
+      }
+    },
+    legend: { show: false },
+    grid: { left: '10%', right: '5%', top: 40, bottom: 30 },
+    xAxis: {
+      type: 'value',
+      axisLabel: { formatter: '{value}亿', fontSize: 11 },
+      splitLine: { lineStyle: { color: '#f0f0f0', type: 'dashed' } }
+    },
+    yAxis: {
+      type: 'category',
+      data: idxFlow.map(function(d) { return d.name; }),
+      axisLabel: { fontSize: 12 },
+      axisLine: { show: false },
+      axisTick: { show: false }
+    },
+    series: [
+      { name: '超大单', type: 'bar', stack: 'total', data: idxFlow.map(function(d) { return d.superLarge; }), itemStyle: { color: UP_COLOR }, barWidth: 24, label: { show: true, position: 'inside', fontSize: 10, formatter: function(p) { return Math.abs(p.value) > 20 ? p.value.toFixed(0) + '亿' : ''; } } },
+      { name: '大单', type: 'bar', stack: 'total', data: idxFlow.map(function(d) { return d.large; }), itemStyle: { color: '#fa8c16' }, label: { show: true, position: 'inside', fontSize: 10, formatter: function(p) { return Math.abs(p.value) > 20 ? p.value.toFixed(0) + '亿' : ''; } } },
+      { name: '中单', type: 'bar', stack: 'total', data: idxFlow.map(function(d) { return d.medium; }), itemStyle: { color: '#1677ff' }, label: { show: true, position: 'inside', fontSize: 10, formatter: function(p) { return Math.abs(p.value) > 20 ? p.value.toFixed(0) + '亿' : ''; } } },
+      { name: '小单', type: 'bar', stack: 'total', data: idxFlow.map(function(d) { return d.small; }), itemStyle: { color: '#52c41a' }, label: { show: true, position: 'inside', fontSize: 10, formatter: function(p) { return Math.abs(p.value) > 20 ? p.value.toFixed(0) + '亿' : ''; } } }
+    ]
+  };
+  chart.setOption(option);
+  window.addEventListener('resize', function() { chart.resize(); });
+})();
+
+// ========== Chart 2: Scatter ==========
+(function() {
+  var dom = document.getElementById('chart-scatter');
+  var chart = echarts.init(dom);
+  var scatterData = sectorData.filter(function(d) { return d.flow != null; });
+  var seriesData = scatterData.map(function(d) {
+    var color = d.chg > 0 ? UP_COLOR : DOWN_COLOR;
+    var size = Math.abs(d.flow) > 100 ? 22 : Math.abs(d.flow) > 50 ? 16 : Math.abs(d.flow) > 20 ? 12 : 8;
+    return { value: [d.flow, d.chg], name: d.name, itemStyle: { color: color }, symbolSize: size };
+  });
+  var option = {
+    tooltip: {
+      trigger: 'item',
+      formatter: function(p) {
+        var name = p.name;
+        var flow = p.value[0];
+        var chg = p.value[1];
+        var html = '<div style="max-width:300px;">';
+        html += '<b style="font-size:14px;">' + name + '</b><br/>';
+        html += '<span>涨跌幅: ' + formatPct(chg) + '</span><br/>';
+        html += '<span>主力净流入: <b>' + formatFlow(flow) + '</b></span>';
+        html += getStockTooltipHTML(name);
+        html += '</div>';
+        return html;
+      }
+    },
+    grid: { left: '12%', right: '5%', top: 40, bottom: 40 },
+    xAxis: {
+      type: 'value',
+      name: '主力净流入(亿)',
+      nameLocation: 'center',
+      nameGap: 30,
+      nameTextStyle: { fontSize: 11, color: '#666' },
+      axisLabel: { fontSize: 11, formatter: '{value}亿' },
+      splitLine: { lineStyle: { color: '#f0f0f0', type: 'dashed' } }
+    },
+    yAxis: {
+      type: 'value',
+      name: '涨跌幅(%)',
+      axisLabel: { fontSize: 11, formatter: '{value}%' },
+      splitLine: { lineStyle: { color: '#f0f0f0', type: 'dashed' } }
+    },
+    series: [{
+      type: 'scatter',
+      data: seriesData,
+      label: {
+        show: true,
+        position: 'right',
+        fontSize: 10,
+        formatter: function(p) { return p.name; },
+        color: '#333'
+      },
+      markLine: {
+        silent: true,
+        symbol: 'none',
+        data: [
+          { xAxis: 0, lineStyle: { color: '#bbb', type: 'dashed' } },
+          { yAxis: 0, lineStyle: { color: '#bbb', type: 'dashed' } }
+        ]
+      }
+    }]
+  };
+  chart.setOption(option);
+  window.addEventListener('resize', function() { chart.resize(); });
+})();
+
+// ========== Chart 3: Market-level Fund Flow Structure ==========
+(function() {
+  var dom = document.getElementById('chart-marketflow');
+  var chart = echarts.init(dom);
+
+  var totalSuperLarge = idxFlow.reduce(function(s, d) { return s + d.superLarge; }, 0);
+  var totalLarge = idxFlow.reduce(function(s, d) { return s + d.large; }, 0);
+  var totalMedium = idxFlow.reduce(function(s, d) { return s + d.medium; }, 0);
+  var totalSmall = idxFlow.reduce(function(s, d) { return s + d.small; }, 0);
+
+  var option = {
+    tooltip: {
+      trigger: 'item',
+      formatter: function(p) { return p.name + ': ' + p.value.toFixed(2) + ' 亿 (' + p.percent + '%)'; }
+    },
+    legend: {
+      orient: 'vertical',
+      right: 10,
+      top: 'center',
+      textStyle: { fontSize: 11 }
+    },
+    series: [
+      {
+        name: '全市场资金结构',
+        type: 'pie',
+        radius: ['45%', '72%'],
+        center: ['38%', '50%'],
+        avoidLabelOverlap: false,
+        label: { show: true, position: 'outside', fontSize: 10, formatter: '{b}\n{d}%' },
+        emphasis: { label: { fontSize: 14, fontWeight: 'bold' } },
+        data: [
+          { value: Math.abs(totalSuperLarge), name: '超大单净流出', itemStyle: { color: DOWN_COLOR } },
+          { value: Math.abs(totalLarge), name: '大单净流出', itemStyle: { color: '#fa8c16' } },
+          { value: totalMedium, name: '中单净流入', itemStyle: { color: '#1677ff' } },
+          { value: totalSmall, name: '小单净流入', itemStyle: { color: '#52c41a' } }
+        ],
+        itemStyle: { borderRadius: 4, borderColor: '#fff', borderWidth: 2 }
+      }
+    ]
+  };
+  chart.setOption(option);
+  window.addEventListener('resize', function() { chart.resize(); });
+})();
+
+// ========== Chart 4: Global Markets Comparison ==========
+(function() {
+  var dom = document.getElementById('chart-global');
+  var chart = echarts.init(dom);
+
+  var globalData = [
+    { name: 'KOSPI', chg: 3.68, label: '昨日' },
+    { name: '日经225', chg: 0.83, label: '昨日' },
+    { name: '上证指数', chg: -0.50, label: '今日' },
+    { name: '深证成指', chg: -0.87, label: '今日' },
+    { name: '创业板指', chg: -0.45, label: '今日' },
+    { name: '科创50', chg: -1.11, label: '今日' },
+    { name: '恒生指数', chg: -0.17, label: '今日' },
+    { name: '道琼斯(隔夜)', chg: -0.04, label: '隔夜' },
+    { name: '标普500(隔夜)', chg: 0.26, label: '隔夜' },
+    { name: '纳斯达克(隔夜)', chg: 0.54, label: '隔夜' },
+    { name: '现货黄金', chg: 0.93, label: '商品' },
+    { name: 'WTI原油', chg: -0.75, label: '商品' },
+    { name: '布伦特原油', chg: -0.60, label: '商品' }
+  ];
+
+  var names = globalData.map(function(d) { return d.name + '(' + d.label + ')'; });
+  var values = globalData.map(function(d) { return d.chg; });
+  var colors = values.map(function(v) { return v > 0 ? UP_COLOR : DOWN_COLOR; });
+
+  var option = {
+    tooltip: {
+      trigger: 'axis',
+      axisPointer: { type: 'shadow' },
+      formatter: function(params) { return '<b>' + params[0].name + '</b><br/>涨跌幅: ' + formatPct(params[0].value); }
+    },
+    grid: { left: '5%', right: '5%', top: 30, bottom: 30 },
+    xAxis: {
+      type: 'category',
+      data: names,
+      axisLabel: { rotate: 45, fontSize: 9, interval: 0 },
+      axisTick: { alignWithLabel: true }
+    },
+    yAxis: {
+      type: 'value',
+      name: '涨跌幅(%)',
+      axisLabel: { fontSize: 10, formatter: '{value}%' },
+      splitLine: { lineStyle: { color: '#f0f0f0', type: 'dashed' } }
+    },
+    series: [{
+      type: 'bar',
+      data: values.map(function(v, i) { return { value: v, itemStyle: { color: colors[i] } }; }),
+      barWidth: '60%',
+      label: {
+        show: true,
+        position: 'outside',
+        fontSize: 8,
+        formatter: function(p) { return formatPct(p.value); },
+        color: '#333'
+      },
+      markLine: {
+        silent: true,
+        symbol: 'none',
+        data: [{ yAxis: 0, lineStyle: { color: '#bbb', type: 'dashed' } }]
+      }
+    }]
+  };
+  chart.setOption(option);
+  window.addEventListener('resize', function() { chart.resize(); });
+})();
+
+// ========== Chart 5: Sector Heatmap ==========
+(function() {
+  var dom = document.getElementById('chart-heat');
+  var chart = echarts.init(dom);
+
+  var heatSectors = sectorData.filter(function(d) { return d.heat != null; }).sort(function(a, b) { return b.heat - a.heat; });
+  var names = heatSectors.map(function(d) { return d.name; });
+  var heats = heatSectors.map(function(d) { return d.heat; });
+  var changes = heatSectors.map(function(d) { return d.chg; });
+
+  var option = {
+    tooltip: {
+      trigger: 'axis',
+      axisPointer: { type: 'shadow' },
+      formatter: function(params) {
+        var n = params[0].name;
+        var s = '';
+        params.forEach(function(p) {
+          if (p.seriesName === '热度指数') s = '<b>' + n + '</b><br/>' + p.marker + '热度: ' + p.value;
+          if (p.seriesName === '涨跌幅') s += '<br/>' + p.marker + '涨跌幅: ' + formatPct(p.value);
+        });
+        return s;
+      }
+    },
+    legend: {
+      data: ['热度指数', '涨跌幅'],
+      top: 6,
+      textStyle: { fontSize: 11 }
+    },
+    grid: { left: '5%', right: '8%', top: 50, bottom: 30 },
+    xAxis: {
+      type: 'category',
+      data: names,
+      axisLabel: { rotate: 45, fontSize: 10, interval: 0 },
+      axisTick: { alignWithLabel: true }
+    },
+    yAxis: [
+      {
+        type: 'value',
+        name: '热度指数',
+        position: 'left',
+        axisLabel: { fontSize: 10 },
+        splitLine: { lineStyle: { color: '#f0f0f0', type: 'dashed' } }
+      },
+      {
+        type: 'value',
+        name: '涨跌幅(%)',
+        position: 'right',
+        axisLabel: { fontSize: 10, formatter: '{value}%' },
+        splitLine: { show: false }
+      }
+    ],
+    series: [
+      {
+        name: '热度指数',
+        type: 'bar',
+        data: heats,
+        itemStyle: {
+          color: function(p) {
+            var ratio = p.value / 10000;
+            var r = Math.round(22 + ratio * 180);
+            var g = Math.round(119 - ratio * 80);
+            var b = Math.round(255 - ratio * 100);
+            return 'rgb(' + r + ',' + g + ',' + b + ')';
+          }
+        },
+        barWidth: '55%',
+        yAxisIndex: 0,
+        label: { show: false }
+      },
+      {
+        name: '涨跌幅',
+        type: 'line',
+        data: changes,
+        yAxisIndex: 1,
+        smooth: true,
+        symbol: 'circle',
+        symbolSize: 6,
+        lineStyle: { color: '#722ed1', width: 2 },
+        itemStyle: { color: '#722ed1' },
+        label: { show: false }
+      }
+    ]
+  };
+  chart.setOption(option);
+  window.addEventListener('resize', function() { chart.resize(); });
+})();
+
+// ========== Table ==========
+(function() {
+  var tbody = document.getElementById('table-body');
+  var sorted = sectorData.slice().sort(function(a, b) {
+    return (b.heat || 0) - (a.heat || 0);
+  });
+  sorted.forEach(function(d) {
+    var tr = document.createElement('tr');
+    var flowStr = d.flow != null ? formatFlow(d.flow) : '--';
+    var flowCls = d.flow != null ? (d.flow > 0 ? 'inflow' : 'outflow') : '';
+    var chgCls = d.chg > 0 ? 'up' : 'down';
+    var heatStr = d.heat != null ? d.heat : '--';
+
+    var signal = '';
+    if (d.flow != null && d.flow > 20) signal = '<span class="tag tag-red">主力加仓</span>';
+    else if (d.flow != null && d.flow > 5) signal = '<span class="tag tag-orange">小幅流入</span>';
+    else if (d.flow != null && d.flow < -100) signal = '<span class="tag tag-green">主力大幅撤退</span>';
+    else if (d.flow != null && d.flow < -50) signal = '<span class="tag tag-green">主力撤退</span>';
+    else if (d.flow != null && d.flow < -10) signal = '<span class="tag tag-blue">资金流出</span>';
+    else if (d.heat > 6000 && d.chg > 3) signal = '<span class="tag tag-red">高度活跃</span>';
+    else if (d.heat > 6000) signal = '<span class="tag tag-orange">高热度</span>';
+    else signal = '<span class="tag tag-gray">观望</span>';
+
+    tr.innerHTML =
+      '<td>' + d.name + '</td>' +
+      '<td class="' + chgCls + '">' + formatPct(d.chg) + '</td>' +
+      '<td>' + formatPct(d.chg5) + '</td>' +
+      '<td>' + formatPct(d.chg20) + '</td>' +
+      '<td>' + (d.turnover != null ? d.turnover.toFixed(2) + '%' : '--') + '</td>' +
+      '<td class="' + flowCls + '">' + flowStr + '</td>' +
+      '<td>' + heatStr + '</td>' +
+      '<td>' + signal + '</td>';
+    tbody.appendChild(tr);
+  });
+})();
+</script>
+
+</body>
+</html>
