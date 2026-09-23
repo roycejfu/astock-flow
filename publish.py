@@ -165,6 +165,15 @@ def update_index(entries, meta):
         rf'\g<1>{latest_meta["title"]}\g<2>',
         html, flags=re.S
     )
+    # 「打开今日看板」按钮直接指向 archive/<最新日期>.html。
+    # 2026-09-23 起不再依赖 latest.html：它只是 archive 里最新一份的副本，
+    # 而整文件覆盖会被本机文件策略拦截（astock-site 那侧已实际触发 PermissionError，
+    # 导致发布流程中断在归档之后、commit 之前）。这里做同样的预防性改造。
+    html = re.sub(
+        r'(<a class="btn" href=")[^"]*(">打开今日看板)',
+        rf'\g<1>archive/{latest_date}.html\g<2>',
+        html
+    )
 
     # 重建历史列表
     list_html = build_list_html(entries, meta)
@@ -211,10 +220,9 @@ def main():
                   file=sys.stderr)
             sys.exit(1)
 
-        # 复制到 archive 和 latest
+        # 复制到 archive（⛔ 不再写 latest.html，见 update_index 里的说明）
         dest = os.path.join(ARCHIVE_DIR, f"{date_str}.html")
         shutil.copy2(args.report, dest)
-        shutil.copy2(args.report, LATEST_PATH)
         print(f"[OK] 看板已归档: archive/{date_str}.html")
 
         # 记录 meta
