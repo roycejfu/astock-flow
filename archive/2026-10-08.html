@@ -1,0 +1,210 @@
+<!DOCTYPE html>
+<html lang="zh-CN"><head><meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>A股资金流向 Dashboard 2026-10-08</title>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body { font-family: -apple-system, BlinkMacSystemFont, 'PingFang SC', 'Helvetica Neue', Arial, sans-serif; background: #f5f6f8; color: #333; padding: 20px; }
+.header { background: linear-gradient(135deg, #1f3a5f 0%, #2c5282 100%); color: #fff; padding: 20px 24px; border-radius: 10px; margin-bottom: 16px; display: flex; justify-content: space-between; align-items: center; }
+.header h1 { font-size: 22px; font-weight: 600; }
+.header .meta { font-size: 12px; opacity: 0.85; margin-top: 6px; }
+.header .update-badge { background: #f6ffed; color: #389e0d; font-size: 12px; padding: 2px 10px; border-radius: 10px; margin-left: 8px; }
+.cards-row { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-bottom: 16px; }
+.cards-row-5 { display: grid; grid-template-columns: repeat(5, 1fr); gap: 12px; margin-bottom: 16px; }
+.index-card { background: #fff; border-radius: 8px; padding: 14px; box-shadow: 0 1px 3px rgba(0,0,0,0.06); }
+.index-card .name { font-size: 12px; color: #888; margin-bottom: 6px; }
+.index-card .price { font-size: 20px; font-weight: 600; }
+.index-card .change { font-size: 13px; margin-top: 2px; }
+.index-card .change.up { color: #cf1322; }
+.index-card .change.down { color: #389e0d; }
+.index-card .change.flat { color: #999; }
+.index-card .vol { font-size: 11px; color: #999; margin-top: 6px; }
+.index-card.global { border-left: 3px solid #1677ff; }
+.section { background: #fff; border-radius: 8px; padding: 16px; margin-bottom: 16px; box-shadow: 0 1px 3px rgba(0,0,0,0.06); }
+.section-title { font-size: 15px; font-weight: 600; margin-bottom: 10px; padding-left: 8px; border-left: 3px solid #2c5282; }
+.charts-row { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 16px; }
+.chart-box { background: #fff; border-radius: 8px; padding: 16px; box-shadow: 0 1px 3px rgba(0,0,0,0.06); }
+.chart-box h3 { font-size: 14px; font-weight: 600; margin-bottom: 10px; color: #444; }
+.note { font-size: 12px; color: #666; line-height: 1.8; }
+.fund-metrics { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-bottom: 16px; }
+.metric-card { background: #fff; border-radius: 8px; padding: 14px; box-shadow: 0 1px 3px rgba(0,0,0,0.06); border-top: 3px solid #1677ff; }
+.metric-card.good { border-top-color: #cf1322; }
+.metric-card.bad { border-top-color: #389e0d; }
+.metric-card.warn { border-top-color: #d46b08; }
+.metric-card .label { font-size: 12px; color: #888; }
+.metric-card .value { font-size: 20px; font-weight: 600; margin: 6px 0; }
+.metric-card .sub { font-size: 11px; color: #999; line-height: 1.6; }
+table { width: 100%; border-collapse: collapse; font-size: 12px; }
+th { background: #fafafa; padding: 8px 10px; text-align: left; font-weight: 600; color: #555; border-bottom: 1px solid #eee; white-space: nowrap; }
+td { padding: 8px 10px; border-bottom: 1px solid #f5f5f5; white-space: nowrap; }
+td.up, .up { color: #cf1322; }
+td.down, .down { color: #389e0d; }
+td.flat, .flat { color: #666; }
+.tag { display: inline-block; padding: 1px 8px; border-radius: 10px; font-size: 11px; }
+.tag-red { background: #fff1f0; color: #cf1322; }
+.tag-green { background: #f6ffed; color: #389e0d; }
+.tag-orange { background: #fff7e6; color: #d46b08; }
+.tag-blue { background: #e6f4ff; color: #1677ff; }
+.tag-gray { background: #fafafa; color: #999; }
+.analysis-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+.analysis-col h4 { font-size: 13px; font-weight: 600; color: #555; margin-bottom: 8px; padding-bottom: 6px; border-bottom: 1px solid #f0f0f0; }
+.analysis-item { display: flex; justify-content: space-between; gap: 12px; font-size: 12px; padding: 5px 0; }
+.analysis-item > span:first-child { color: #888; white-space: nowrap; }
+.analysis-item .val { color: #555; text-align: right; }
+.concl { font-size: 13px; line-height: 1.9; color: #444; }
+.concl li { margin: 8px 0 8px 18px; }
+.stock-focus { background: linear-gradient(135deg,#fff7e6 0%,#fff1f0 100%); border-radius: 8px; padding: 14px 16px; margin-bottom: 16px; }
+.stock-focus h3 { font-size: 14px; font-weight: 600; margin-bottom: 8px; color: #ad4e00; }
+.focus-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 10px; }
+.focus-cell { background: rgba(255,255,255,0.75); border-radius: 6px; padding: 8px 10px; }
+.focus-cell .k { font-size: 11px; color: #999; }
+.focus-cell .v { font-size: 15px; font-weight: 600; margin-top: 3px; }
+.focus-note { font-size: 12px; color: #666; margin-top: 10px; line-height: 1.7; }
+.snap-banner { background: #fff7e6; border: 1px solid #ffd591; color: #ad4e00; font-size: 12px; padding: 8px 14px; border-radius: 8px; margin-bottom: 16px; line-height:1.7; }
+@media (max-width: 1200px) { .charts-row { grid-template-columns: 1fr; } .cards-row, .cards-row-5, .fund-metrics { grid-template-columns: repeat(2, 1fr); } }
+</style>
+</head><body>
+<div class="header">
+  <div><h1>A股资金流向看板 <span class="update-badge">走弱 · 科技失血</span></h1>
+  <div class="meta">2026-10-08（周四）· 国庆长假后首个交易日 · 数据源：东财 push2delay / 新浪 / 腾讯 ｜ 单位：亿元</div></div>
+</div>
+
+<div class="snap-banner">
+⚠️ <strong>本期为盘中快照（≈10:05，开盘约35分钟）</strong>：所有「当日」主力净额、涨跌幅、成交额、A/H 溢价、港股 α/CLV/量比
+均为<strong>盘中瞬时值，非收盘数据</strong>，收盘前可能显著变化；「5日 / 10日」为截至上一交易日（09-30）的累计值。
+涨跌家数 / 涨停数为<strong>涨跌幅区间估算口径，非交易所口径</strong>。完整收盘数据以当日「A股收盘复盘」为准。
+</div>
+
+<div class="fund-metrics">
+<div class="metric-card warn"><div class="label">两市成交额（盘中）</div><div class="value">6,525亿</div><div class="sub">沪 3,132 ＋ 深 3,393<br>开盘约35分钟，非全天</div></div>
+<div class="metric-card good"><div class="label">涨跌家数（盘中快照）</div><div class="value">2996 / 1580</div><div class="sub">平盘 545 ｜ 涨多跌少<br>涨幅区间估算口径，非交易所</div></div>
+<div class="metric-card good"><div class="label">涨停 / 跌停（估算）</div><div class="value">64 / 16</div><div class="sub">20cm 涨停 5 家<br>涨跌幅区间估算口径</div></div>
+<div class="metric-card bad"><div class="label">融资余额（09-30）</div><div class="value">25,404.57亿</div><div class="sub">单日净卖出 -392.32亿<br>节前大幅降杠杆</div></div>
+</div>
+<div class='cards-row'><div class='index-card'><div class='name'>上证指数</div><div class='price'>3856.76</div><div class='change up'>+0.38%</div><div class='vol'>主力 +17.03亿 ｜ 超大单 +20.08亿 ｜ 沪成交 3132亿</div></div><div class='index-card'><div class='name'>深证成指</div><div class='price'>12890.38</div><div class='change up'>+0.02%</div><div class='vol'>主力 -0.42亿 ｜ 超大单 +13.82亿 ｜ 深成交 3393亿</div></div><div class='index-card'><div class='name'>创业板指</div><div class='price'>3125.04</div><div class='change down'>-0.33%</div><div class='vol'>主力 -3.60亿 ｜ 超大单 +2.05亿</div></div><div class='index-card'><div class='name'>科创50</div><div class='price'>1500.57</div><div class='change down'>-1.92%</div><div class='vol'>主力 -3.13亿 ｜ 超大单 -3.05亿</div></div></div>
+<div class='cards-row-5'><div class='index-card global'><div class='name'>纳斯达克</div><div class='price'>27538.69</div><div class='change down'>-0.22%</div></div><div class='index-card global'><div class='name'>标普500</div><div class='price'>7801.77</div><div class='change down'>-0.22%</div></div><div class='index-card global'><div class='name'>恒生科技</div><div class='price'>4164.14</div><div class='change down'>-0.72%</div></div><div class='index-card global'><div class='name'>英伟达</div><div class='price'>237.47</div><div class='change down'>-0.74%</div></div><div class='index-card global'><div class='name'>美光</div><div class='price'>1088.00</div><div class='change up'>+4.06%</div></div></div>
+<div class="note" style="margin:-8px 0 16px 4px">
+外围：隔夜（10-07）美股三大指数小幅收跌——道指 51179.87 <span class="down">-0.66%</span>、纳指 <span class="down">-0.22%</span>、标普 <span class="down">-0.22%</span>；
+芯片分化，<strong>美光 <span class="up">+4.06%</span></strong> 独强、博通 +0.19%、微软 +0.09%，英伟达 -0.74%、AMD -0.55%。
+恒指 24080.60 <span class="down">-0.21%</span>、恒生科技 <span class="down">-0.72%</span>（盘中）；黄金 4162.13 <span class="up">+0.52%</span>、WTI 89.54 <span class="up">+1.43%</span>。
+</div>
+
+<div class="charts-row">
+  <div class="chart-box"><h3>板块主力净流入 TOP/BOTTOM（当日，亿元）</h3><div id="chartSector" style="height:520px"></div></div>
+  <div class="chart-box"><h3>自选股主力净额（当日 / 5日 / 10日，亿元）</h3><div id="chartStock" style="height:520px"></div></div>
+</div>
+
+<div class="section"><div class="section-title">板块主力净流入 TOP15（当日 / 5日 / 10日）</div><table><tr><th>板块</th><th>涨跌</th><th>当日</th><th>5日</th><th>10日</th></tr><tr><td><strong>基础化工</strong></td><td class='up'>+1.16%</td><td class='up'><strong>+19.36</strong></td><td class='down'>-61.24</td><td class='down'>-100.41</td></tr><tr><td><strong>电力设备</strong></td><td class='up'>+1.74%</td><td class='up'><strong>+16.36</strong></td><td class='down'>-44.59</td><td class='down'>-99.67</td></tr><tr><td><strong>电池</strong></td><td class='up'>+4.38%</td><td class='up'><strong>+16.32</strong></td><td class='up'>+5.21</td><td class='down'>-22.21</td></tr><tr><td><strong>元件</strong></td><td class='up'>+0.34%</td><td class='up'><strong>+15.10</strong></td><td class='down'>-183.43</td><td class='down'>-304.60</td></tr><tr><td><strong>印制电路板</strong></td><td class='up'>+0.06%</td><td class='up'><strong>+11.96</strong></td><td class='down'>-139.85</td><td class='down'>-227.90</td></tr><tr><td><strong>塑料</strong></td><td class='up'>+1.55%</td><td class='up'><strong>+10.66</strong></td><td class='down'>-6.23</td><td class='down'>-13.38</td></tr><tr><td><strong>国防军工</strong></td><td class='up'>+1.18%</td><td class='up'><strong>+8.63</strong></td><td class='down'>-16.47</td><td class='down'>-69.06</td></tr><tr><td><strong>膜材料</strong></td><td class='up'>+2.1%</td><td class='up'><strong>+6.92</strong></td><td class='up'>+0.86</td><td class='down'>-7.31</td></tr><tr><td><strong>电池化学品</strong></td><td class='up'>+3.8%</td><td class='up'><strong>+6.33</strong></td><td class='down'>-1.28</td><td class='down'>-7.43</td></tr><tr><td><strong>消费电子零部件及组装</strong></td><td class='down'>-0.07%</td><td class='up'><strong>+5.47</strong></td><td class='down'>-60.89</td><td class='down'>-77.02</td></tr><tr><td><strong>航运</strong></td><td class='up'>+3.6%</td><td class='up'><strong>+5.43</strong></td><td class='down'>-0.24</td><td class='down'>-9.69</td></tr><tr><td><strong>航运港口</strong></td><td class='up'>+2.81%</td><td class='up'><strong>+5.12</strong></td><td class='down'>-1.32</td><td class='down'>-14.56</td></tr><tr><td><strong>消费电子</strong></td><td class='down'>-0.32%</td><td class='up'><strong>+5.12</strong></td><td class='down'>-62.76</td><td class='down'>-79.36</td></tr><tr><td><strong>交通运输</strong></td><td class='up'>+1.35%</td><td class='up'><strong>+4.86</strong></td><td class='up'>+1.87</td><td class='down'>-8.30</td></tr><tr><td><strong>农产品加工</strong></td><td class='up'>+0.88%</td><td class='up'><strong>+4.78</strong></td><td class='down'>-5.23</td><td class='up'>+2.97</td></tr></table>
+<div class="note" style="margin-top:8px">⚠️ <strong>只有 5日 + 10日双正才算趋势性流入。</strong>本榜 15 个里<strong>没有一个 5日+10日双正</strong>——最大量级的基础化工（+19.36）5日 -61.24、10日 -100.41；电力设备（+16.36）5日 -44.59；元件（+15.10）10日 -304.60、印制电路板（+11.96）10日 -227.90。<br>
+· 少数 5日转正的是<strong>电池</strong>（+16.32，5日 +5.21，但 10日 -22.21）、交通运输（+4.86，5日 +1.87，10日 -8.30）、膜材料（+6.92，5日 +0.86）——<strong>属「短期回流」，10日仍是缺口，不是趋势确立</strong>。<br>
+⛔ 今日流入端<strong>没有一只 5日+10日双正的方向</strong>，全部是超跌回流或单日脉冲。</div></div>
+
+<div class="section"><div class="section-title">板块主力净流出 TOP15（当日 / 5日 / 10日）</div><table><tr><th>板块</th><th>涨跌</th><th>当日</th><th>5日</th><th>10日</th></tr><tr><td><strong>半导体</strong></td><td class='down'>-1.7%</td><td class='down'><strong>-30.96</strong></td><td class='down'>-372.56</td><td class='down'>-342.95</td></tr><tr><td><strong>数字芯片设计</strong></td><td class='down'>-1.81%</td><td class='down'><strong>-20.81</strong></td><td class='down'>-199.76</td><td class='down'>-136.11</td></tr><tr><td><strong>通信</strong></td><td class='down'>-0.73%</td><td class='down'><strong>-12.52</strong></td><td class='down'>-293.05</td><td class='down'>-370.63</td></tr><tr><td><strong>通信设备</strong></td><td class='down'>-1.12%</td><td class='down'><strong>-12.22</strong></td><td class='down'>-284.22</td><td class='down'>-365.89</td></tr><tr><td><strong>电子</strong></td><td class='down'>-0.8%</td><td class='down'><strong>-11.68</strong></td><td class='down'>-699.35</td><td class='down'>-784.99</td></tr><tr><td><strong>传媒</strong></td><td class='down'>-0.75%</td><td class='down'><strong>-7.08</strong></td><td class='down'>-37.08</td><td class='down'>-42.17</td></tr><tr><td><strong>汽车</strong></td><td class='up'>+0.04%</td><td class='down'><strong>-6.54</strong></td><td class='up'>+15.42</td><td class='up'>+52.75</td></tr><tr><td><strong>通信线缆及配套</strong></td><td class='down'>-1.91%</td><td class='down'><strong>-6.50</strong></td><td class='down'>-117.57</td><td class='down'>-174.98</td></tr><tr><td><strong>计算机</strong></td><td class='down'>-0.25%</td><td class='down'><strong>-5.84</strong></td><td class='down'>-103.34</td><td class='down'>-125.50</td></tr><tr><td><strong>通信网络设备及器件</strong></td><td class='down'>-1.98%</td><td class='down'><strong>-5.32</strong></td><td class='down'>-156.96</td><td class='down'>-162.20</td></tr><tr><td><strong>分立器件</strong></td><td class='down'>-3.47%</td><td class='down'><strong>-5.07</strong></td><td class='down'>-19.72</td><td class='down'>-17.17</td></tr><tr><td><strong>集成电路制造</strong></td><td class='down'>-2.01%</td><td class='down'><strong>-4.44</strong></td><td class='down'>-28.56</td><td class='down'>-22.27</td></tr><tr><td><strong>汽车零部件</strong></td><td class='up'>+0.03%</td><td class='down'><strong>-4.20</strong></td><td class='up'>+12.55</td><td class='up'>+27.22</td></tr><tr><td><strong>生物制品</strong></td><td class='down'>-2.34%</td><td class='down'><strong>-3.54</strong></td><td class='down'>-6.02</td><td class='up'>+3.81</td></tr><tr><td><strong>机械设备</strong></td><td class='up'>+0.19%</td><td class='down'><strong>-3.27</strong></td><td class='down'>-121.61</td><td class='down'>-145.79</td></tr></table>
+<div class="note" style="margin-top:8px">⚠️ <strong>流出高度集中在 AI 算力 / 半导体链</strong>：半导体 -30.96、数字芯片设计 -20.81、通信 -12.52、通信设备 -12.22、电子 -11.68，五个板块当日合计流出逾 75 亿（成分有重叠，不可相加），且 <strong>5日 / 10日全部深度为负</strong>——电子 10日累计 -784.99、半导体 -342.95、通信 -370.63、通信设备 -365.89。<br>
+· <strong>这是趋势性流出</strong>（5日+10日双负），不是单日兑现。<br>
+· 注意 <strong>汽车（-6.54，但 5日 +15.42 / 10日 +52.75）、汽车零部件（-4.20，5日 +12.55 / 10日 +27.22）</strong>是「短期流出、中期底仓未动」，与半导体链的性质不同。</div></div>
+
+<div class="section"><div class="section-title">板块涨幅榜 TOP12（附当日主力）</div><table><tr><th>板块</th><th>涨跌幅</th><th>当日主力</th></tr><tr><td><strong>蓄电池及其他电池</strong></td><td class='up'>+6.63%</td><td class='up'>+4.77</td></tr><tr><td><strong>锂电专用设备</strong></td><td class='up'>+6.54%</td><td class='up'>+3.70</td></tr><tr><td><strong>房产租赁经纪</strong></td><td class='up'>+4.71%</td><td class='up'>+2.76</td></tr><tr><td><strong>油气及炼化工程</strong></td><td class='up'>+4.4%</td><td class='up'>+0.52</td></tr><tr><td><strong>电池</strong></td><td class='up'>+4.37%</td><td class='up'>+16.32</td></tr><tr><td><strong>电池化学品</strong></td><td class='up'>+3.79%</td><td class='up'>+6.33</td></tr><tr><td><strong>氨纶</strong></td><td class='up'>+3.73%</td><td class='up'>+0.15</td></tr><tr><td><strong>炼油化工</strong></td><td class='up'>+3.65%</td><td class='up'>+1.46</td></tr><tr><td><strong>航运</strong></td><td class='up'>+3.59%</td><td class='up'>+5.42</td></tr><tr><td><strong>焦炭Ⅲ</strong></td><td class='up'>+3.58%</td><td class='up'>+1.30</td></tr><tr><td><strong>焦炭Ⅱ</strong></td><td class='up'>+3.58%</td><td class='up'>+1.30</td></tr><tr><td><strong>油服工程</strong></td><td class='up'>+3.57%</td><td class='up'>+0.67</td></tr></table>
+<div class="note" style="margin-top:8px"><strong>涨幅榜被新能源材料 / 周期占据</strong>：蓄电池、锂电设备、电池、电池化学品、氨纶、炼油化工、焦炭、航运、油服工程。<strong>AI 算力 / 半导体链条无一进入涨幅榜</strong>（半导体当日 -1.70%、分立器件 -3.47%、集成电路制造 -2.01% 反而领跌）。<br>
+· 涨幅与资金同向的只有<strong>电池（+4.37%，主力 +16.32）、电池化学品（+3.79%，+6.33）、航运（+3.59%，+5.42）</strong>；房产租赁经纪 +4.71% 但主力仅 +2.76、油气工程 +4.40% 主力仅 +0.52，属题材脉冲。</div></div>
+
+<div class="section"><div class="section-title">⭐ 自选股资金持续性（按方向分组 · 当日 / 5日 / 10日）</div><table><tr><th>标的</th><th>涨跌</th><th>当日</th><th>5日</th><th>10日</th><th>超大/大单</th><th>定性</th></tr><tr style='background:#f5f7fa'><td colspan='7'><strong>■ 存储</strong>　方向合计：当日 <span class='down'><strong>-10.04</strong></span>　10日 <span class='down'><strong>-62.80</strong></span></td></tr><tr><td style='padding-left:20px'>长鑫科技</td><td class='down'>-2.9%</td><td class='down'><strong>-8.32</strong></td><td class='down'>-35.04</td><td class='down'>-34.34</td><td style='font-size:11px;color:#999'>超-4.69/大-3.63</td><td><span class='tag tag-green'>趋势性流出</span></td></tr><tr><td style='padding-left:20px'>兆易创新</td><td class='down'>-2.02%</td><td class='down'><strong>-4.20</strong></td><td class='down'>-40.99</td><td class='down'>-19.81</td><td style='font-size:11px;color:#999'>超-2.70/大-1.50</td><td><span class='tag tag-green'>趋势性流出</span></td></tr><tr style='background:#fff7e6'><td style='padding-left:20px'>澜起科技</td><td class='up'>+1.39%</td><td class='up'><strong>+2.48</strong></td><td class='down'>-4.19</td><td class='down'>-8.65</td><td style='font-size:11px;color:#999'>超+0.75/大+1.73</td><td><span class='tag tag-orange'>流出中反弹</span></td></tr><tr style='background:#f5f7fa'><td colspan='7'><strong>■ 光模块</strong>　方向合计：当日 <span class='up'><strong>+4.37</strong></span>　10日 <span class='down'><strong>-49.23</strong></span></td></tr><tr style='background:#fff7e6'><td style='padding-left:20px'>中际旭创</td><td class='down'>-0.06%</td><td class='up'><strong>+4.37</strong></td><td class='down'>-56.48</td><td class='down'>-49.23</td><td style='font-size:11px;color:#999'>超+3.07/大+1.30</td><td><span class='tag tag-orange'>流出中反弹</span></td></tr><tr style='background:#f5f7fa'><td colspan='7'><strong>■ PCB</strong>　方向合计：当日 <span class='up'><strong>+2.97</strong></span>　10日 <span class='up'><strong>+5.62</strong></span></td></tr><tr style='background:#fff7e6'><td style='padding-left:20px'>胜宏科技</td><td class='up'>+2.1%</td><td class='up'><strong>+1.18</strong></td><td class='down'>-20.35</td><td class='down'>-0.20</td><td style='font-size:11px;color:#999'>超+1.00/大+0.18</td><td><span class='tag tag-orange'>流出中反弹</span></td></tr><tr style='background:#fff1f0'><td style='padding-left:20px'>深南电路</td><td class='up'>+3.64%</td><td class='up'><strong>+1.79</strong></td><td class='up'>+4.01</td><td class='up'>+5.82</td><td style='font-size:11px;color:#999'>超+1.16/大+0.62</td><td><span class='tag tag-red'>趋势性流入</span></td></tr><tr style='background:#f5f7fa'><td colspan='7'><strong>■ 先进封装</strong>　方向合计：当日 <span class='down'><strong>-0.37</strong></span>　10日 <span class='down'><strong>-8.24</strong></span></td></tr><tr><td style='padding-left:20px'>盛合晶微</td><td class='down'>-3.81%</td><td class='down'><strong>-0.52</strong></td><td class='down'>-4.68</td><td class='down'>-8.09</td><td style='font-size:11px;color:#999'>超-0.16/大-0.37</td><td><span class='tag tag-green'>趋势性流出</span></td></tr><tr style='background:#fff7e6'><td style='padding-left:20px'>芯碁微装</td><td class='down'>-1.12%</td><td class='up'><strong>+0.15</strong></td><td class='down'>-1.20</td><td class='down'>-0.15</td><td style='font-size:11px;color:#999'>超+0.14/大0.00</td><td><span class='tag tag-orange'>流出中反弹</span></td></tr></table>
+<div class="note" style="margin-top:8px">单位亿元。定性标签来自 flow_trend.py（5日+10日双正=趋势性流入，双负=趋势性流出，双负但当日正=流出中反弹）。<br><br>
+<strong>📌 方向排序（按 10日主力）：PCB +5.62 ＞ 先进封装 -8.24 ＞ 光模块 -49.23 ＞ 存储 -62.80</strong><br>
+· <strong>PCB 是唯一 10日为正的方向</strong>（+5.62）：深南电路趋势性流入（+1.79 / +4.01 / +5.82，超大单 +1.16），胜宏科技 +2.10% 但 10日 -0.20 刚在零轴附近（流出中反弹）——<strong>方向内部深南强、胜宏弱，力度差一档</strong>。<br>
+· <strong>存储是全池最弱方向</strong>（10日 -62.80）：长鑫（-8.32 / -35.04 / -34.34）、兆易（-4.20 / -40.99 / -19.81）双趋势性流出，澜起 +1.39% 当日 +2.48 属流出中反弹。<br>
+· <strong>光模块中际旭创</strong>：当日 +4.37（超大单 +3.07）但 5日 -56.48、10日 -49.23，是全池 10日缺口最大的单只——<strong>当日回流只填了 10日缺口的约 9%，勿当反转</strong>。<br>
+· <strong>先进封装内部分化</strong>：盛合晶微 -3.81% 趋势性流出（三期全负），芯碁微装 -1.12% 当日微正、10日 -0.15 接近持平。</div></div>
+
+<div class="stock-focus">
+  <h3>🔬 澜起科技（688008）专项 · 每期必做</h3>
+  <div class="focus-grid">
+    <div class="focus-cell"><div class="k">现价 / 涨跌</div><div class="v up">205.12　+1.39%</div></div>
+    <div class="focus-cell"><div class="k">当日主力</div><div class="v up">+2.48亿</div></div>
+    <div class="focus-cell"><div class="k">超大单 / 大单</div><div class="v">+0.75 / +1.73</div></div>
+    <div class="focus-cell"><div class="k">5日 / 10日</div><div class="v down">-4.19 / -8.65</div></div>
+    <div class="focus-cell"><div class="k">定性</div><div class="v" style="color:#d46b08">流出中反弹</div></div>
+  </div>
+  <div class="focus-note">
+  当日主力 +2.48 亿（超大单 +0.75、大单 +1.73，中单 -2.43、小单 -0.05）—— <strong>机构小幅回补、中户减</strong>；但 <strong>5日 -4.19、10日 -8.65 仍双负</strong>，定性维持「流出中反弹」，<strong>当日回流只填了 10日缺口的约 29%</strong>。<br>
+  H 股 287.0 <span class="down">-1.37%</span>，A 股折价 <span class="down">-16.21%</span>（收窄 2.39pct，因 A 涨 H 跌）。澜起继续在零轴下方反复摆动，<strong>属于「没有形成趋势」而非「趋势被破坏」</strong>，不按趋势股对待。
+  </div>
+</div>
+
+<div class="section"><div class="section-title">⭐ 恒生科技方向（港股 · α 基准＝恒生科技 -0.88%）</div><table><tr><th>标的</th><th>收盘</th><th>涨跌</th><th>α(vs恒科)</th><th>CLV</th><th>量比</th><th>52周分位</th><th>PB</th><th>成交(亿HKD)</th></tr><tr><td><strong>腾讯控股</strong></td><td>418.80</td><td class='down'>-0.43%</td><td class='up'><strong>+0.45</strong></td><td>0.09</td><td>0.44x</td><td>3.1%</td><td>2.91</td><td>26.74</td></tr><tr><td><strong>美团-W</strong></td><td>70.10</td><td class='down'>-0.07%</td><td class='up'><strong>+0.80</strong></td><td>0.04</td><td>0.18x</td><td>14.5%</td><td>2.22</td><td>2.29</td></tr></table>
+<div class="note" style="margin-top:8px">⚠️ <strong>α 基准是恒生科技（盘中 -0.88%），不是恒指。</strong><br>
+· 腾讯 418.80 <span class="down">-0.43%</span>，α +0.45%、CLV 0.09、量比 0.44x —— 缩量收在低位，52周分位仅 3.1%（贴近区间底部）；<br>
+· 美团 70.10 <span class="down">-0.07%</span>，α +0.80% 为恒科成分相对赢家，但 CLV 0.04、量比 0.18x，<strong>「跑赢」靠跌得少，不是有人在买</strong>。<br>
+· 两只均未进入当日港股通十大成交榜；港股通持股为存量口径、交收滞后，不能反推当日净买入。<strong>南向净买入本次接口未返回有效值，按铁律不填估算。</strong><br>
+⚠️ 港股 α/CLV/量比均为<strong>盘中瞬时值</strong>，收盘前会变。</div></div>
+
+<div class="section"><div class="section-title">⭐ A/H 溢价（汇率 HKD/CNY = 0.8541）</div><table><tr><th>标的</th><th>A股价</th><th>A涨跌</th><th>H股价(HKD)</th><th>H涨跌</th><th>A/H溢价</th><th>日内变化</th><th>H·α</th><th>H·CLV</th><th>H·量比</th></tr><tr><td><strong>中际旭创</strong></td><td>812.00</td><td class='up'>+0.44%</td><td>1092.0</td><td class='up'>+1.96%</td><td class='down'><strong>-12.94%</strong></td><td class='flat'>走阔 1.32pct</td><td class='down'>-0.81</td><td>0.06</td><td>0.64x</td></tr><tr><td><strong>澜起科技</strong></td><td>205.38</td><td class='up'>+1.52%</td><td>287.0</td><td class='down'>-1.37%</td><td class='down'><strong>-16.21%</strong></td><td class='flat'>收窄 2.39pct</td><td class='down'>-1.19</td><td>0.23</td><td>0.44x</td></tr><tr><td><strong>兆易创新</strong></td><td>347.80</td><td class='down'>-1.72%</td><td>433.2</td><td class='up'>+0.51%</td><td class='down'><strong>-6.00%</strong></td><td class='flat'>走阔 2.14pct</td><td class='up'>+0.50</td><td>0.18</td><td>0.43x</td></tr><tr><td><strong>胜宏科技</strong></td><td>215.54</td><td class='up'>+2.49%</td><td>206.6</td><td class='up'>+1.27%</td><td class='up'><strong>+22.15%</strong></td><td class='flat'>收窄 1.45pct</td><td class='up'>+1.07</td><td>0.53</td><td>0.84x</td></tr><tr><td><strong>芯碁微装</strong></td><td>386.46</td><td class='down'>-0.57%</td><td>328.0</td><td class='down'>-0.3%</td><td class='up'><strong>+37.95%</strong></td><td class='flat'>走阔 0.37pct</td><td class='down'>-2.23</td><td>0.15</td><td>1.18x</td></tr><tr><td><strong>鼎泰高科</strong></td><td>344.29</td><td class='up'>+0.96%</td><td>267.6</td><td class='down'>-1.55%</td><td class='up'><strong>+50.64%</strong></td><td class='flat'>收窄 3.75pct</td><td class='flat'>—</td><td>—</td><td>—</td></tr><tr><td><strong>三环集团</strong></td><td>121.85</td><td class='up'>+3.85%</td><td>135.9</td><td class='up'>+1.95%</td><td class='up'><strong>+4.98%</strong></td><td class='flat'>收窄 1.92pct</td><td class='flat'>—</td><td>—</td><td>—</td></tr><tr><td><strong>立讯精密</strong></td><td>49.94</td><td class='up'>+1.03%</td><td>53.5</td><td class='up'>+2.59%</td><td class='up'><strong>+9.29%</strong></td><td class='flat'>走阔 1.68pct</td><td class='flat'>—</td><td>—</td><td>—</td></tr></table>
+<div class="note" style="margin-top:8px">⚠️ 溢价<strong>「日内变化」列用中性色</strong>：收窄/走阔本身无好坏方向，须结合 H 股 α/CLV/量比判断强弱。<br>
+<strong>今日 5 走阔 / 3 收窄</strong>（盘中）：走阔＝中际旭创(走阔1.32)、胜宏(1.45)、兆易(2.14)、三环(1.92)、鼎泰(3.75)；收窄＝澜起(2.39)、芯碁(0.37)、立讯(1.68)。<br>
+· <strong>走阔居多 → A 股相对更强 / H 股更弱</strong>，但这是国庆后首日开盘的盘中瞬时状态，量比普遍 &lt; 1（0.43~1.18x），<strong>成交清淡，信号强度有限</strong>。<br>
+· ⚠️ 按「α &gt; 0 且 CLV ≥ 0.8 且量比 &gt; 1.5」三条同时成立的标准，<strong>今日无一达标</strong>。最接近的是胜宏（α +1.07、CLV 0.53、量比 0.84x）——α 正向但 CLV/量比均未达标。<br>
+· 澜起 -16.21%、兆易 -6.00%、中际旭创 -12.94% 为 <strong>A 股折价</strong>（H 股更贵），不是 A 股溢价；胜宏 +22.15%、芯碁 +37.95%、鼎泰 +50.64%、三环 +4.98%、立讯 +9.29% 为 A 股溢价。</div></div>
+
+<div class="section"><div class="section-title">研判（数据层 · 核心结论 ≤3 条）</div>
+<div class="analysis-grid">
+  <div class="analysis-col"><h4>资金 & 板块</h4>
+    <div class="analysis-item"><span>指数</span><span class="val">上证 +0.38% ｜ 深成 +0.02% ｜ 创业板 -0.33% ｜ 科创50 <b class="down">-1.92%</b></span></div>
+    <div class="analysis-item"><span>指数资金</span><span class="val">上证主力 +17.03（超大单+20.08）｜ 深成 -0.42 ｜ 创业板 -3.60 ｜ 科创50 -3.13</span></div>
+    <div class="analysis-item"><span>宽度</span><span class="val">涨 2996 / 跌 1580 ｜ 涨停≈64 / 跌停 16（估算口径）</span></div>
+    <div class="analysis-item"><span>流出集中</span><span class="val">半导体 -30.96 ｜ 数字芯片 -20.81 ｜ 电子 -11.68（5/10日全负）</span></div>
+    <div class="analysis-item"><span>流入集中</span><span class="val">基础化工 +19.36 ｜ 电力设备 +16.36 ｜ 电池 +16.32（无一双正）</span></div>
+    <div class="analysis-item"><span>融资余额</span><span class="val">25,404.57亿（09-30），单日净卖出 -392.32亿</span></div>
+  </div>
+  <div class="analysis-col"><h4>跨市场 & 自选</h4>
+    <div class="analysis-item"><span>方向强弱(10日)</span><span class="val">PCB +5.62 ＞ 先进封装 -8.24 ＞ 光模块 -49.23 ＞ 存储 -62.80</span></div>
+    <div class="analysis-item"><span>唯一趋势流入</span><span class="val">深南电路（+1.79 / +4.01 / +5.82）</span></div>
+    <div class="analysis-item"><span>恒生科技</span><span class="val">腾讯 α+0.45 / 美团 α+0.80，均缩量收低位</span></div>
+    <div class="analysis-item"><span>A/H 溢价</span><span class="val">5 走阔 / 3 收窄，A 股相对更强（盘中）</span></div>
+    <div class="analysis-item"><span>澜起科技</span><span class="val">+1.39%，主力+2.48，流出中反弹（10日-8.65）</span></div>
+    <div class="analysis-item"><span>外围</span><span class="val">美光 +4.06% 独强，纳指 -0.22%，恒科 -0.72%</span></div>
+  </div>
+</div>
+<div class="concl" style="margin-top:14px"><ol>
+<li><strong>开盘科技领跌、资金从 AI 算力链撤离：</strong>科创50 <span class="down">-1.92%</span> 领跌，半导体 -30.96、数字芯片 -20.81、电子 -11.68 亿，且这些板块 5日/10日全部深度为负（电子 10日 -784.99）——是<strong>趋势性流出</strong>而非单日兑现。流入端基础化工/电力设备/电池虽量级不小，但<strong>无一只 5日+10日双正</strong>，属超跌回流。</li>
+<li><strong>自选池里 PCB 是唯一 10日为正的方向（+5.62）：</strong>深南电路趋势性流入（+1.79/+4.01/+5.82）为全池最强，胜宏 +2.10% 但 10日 -0.20 仍在零轴；存储最弱（10日 -62.80，长鑫/兆易双趋势流出）。中际旭创当日 +4.37 但 10日 -49.23，<strong>当日回流只填 10日缺口约 9%</strong>，明确标为「流出中反弹」。</li>
+<li><strong>A/H 溢价 5 走阔 3 收窄（A 股相对更强），但为国庆后首日盘中瞬时值：</strong>量比普遍 &lt;1、成交清淡，信号强度有限；按「α&gt;0 且 CLV≥0.8 且量比&gt;1.5」三条同时成立的标准今日无一达标。港股腾讯/美团 α 虽为正，但 CLV 均接近 0、缩量收低位，「跑赢」靠跌得少而非有人在买。</li>
+</ol></div>
+</div>
+
+<div class="section"><div class="note">
+<strong>数据口径说明：</strong>指数/板块/个股资金流取自东财 push2delay（当日主力净额 f62、超大单 f66、大单 f72、中单 f78、小单 f84、5日 f164、10日 f174，单位元）；
+「当日」为 <strong>2026-10-08 盘中 ≈10:05 瞬时快照</strong>，「5日/10日」截至 2026-09-30 收盘。<br>
+自选股池来自 <code>watchlist.py</code>（唯一数据源）：存储（长鑫/兆易/澜起）、光模块（中际旭创）、PCB（胜宏/深南电路）、先进封装（盛合晶微/芯碁微装）、恒生科技（腾讯/美团，纯港股）。
+恒生科技方向为港股，无 A 股主力资金字段，改用 <code>hk_attribution.py</code> 的 α/CLV/量比/52周分位口径，<strong>α 基准是恒生科技，不是恒指</strong>。<br>
+A/H 溢价取自 <code>ah_premium.py</code>（腾讯 qt.gtimg.cn，汇率 HKD/CNY=0.8541）；大族数控溢价异常已剔除。<strong>本报告定位「今天发生了什么」的数据层，因果推演与持仓策略见 16:00 收盘复盘。</strong>
+</div></div>
+
+<script src="https://cdn.jsdelivr.net/npm/echarts@5.4.3/dist/echarts.min.js"></script>
+<script>
+var sectorData = [{"name": "半导体", "v": -30.96}, {"name": "数字芯片设计", "v": -20.81}, {"name": "通信", "v": -12.52}, {"name": "通信设备", "v": -12.22}, {"name": "电子", "v": -11.68}, {"name": "传媒", "v": -7.08}, {"name": "汽车", "v": -6.54}, {"name": "通信线缆及配套", "v": -6.5}, {"name": "计算机", "v": -5.84}, {"name": "通信网络设备及器件", "v": -5.32}, {"name": "分立器件", "v": -5.07}, {"name": "集成电路制造", "v": -4.44}, {"name": "汽车零部件", "v": -4.2}, {"name": "生物制品", "v": -3.54}, {"name": "机械设备", "v": -3.27}, {"name": "农产品加工", "v": 4.78}, {"name": "交通运输", "v": 4.86}, {"name": "航运港口", "v": 5.12}, {"name": "消费电子", "v": 5.12}, {"name": "航运", "v": 5.43}, {"name": "消费电子零部件及组装", "v": 5.47}, {"name": "电池化学品", "v": 6.33}, {"name": "膜材料", "v": 6.92}, {"name": "国防军工", "v": 8.63}, {"name": "塑料", "v": 10.66}, {"name": "印制电路板", "v": 11.96}, {"name": "元件", "v": 15.1}, {"name": "电池", "v": 16.32}, {"name": "电力设备", "v": 16.36}, {"name": "基础化工", "v": 19.36}];
+var stockData = [{"name": "长鑫科技", "d1": -8.32, "d5": -35.04, "d10": -34.34}, {"name": "兆易创新", "d1": -4.2, "d5": -40.99, "d10": -19.81}, {"name": "澜起科技", "d1": 2.48, "d5": -4.19, "d10": -8.65}, {"name": "中际旭创", "d1": 4.37, "d5": -56.48, "d10": -49.23}, {"name": "胜宏科技", "d1": 1.18, "d5": -20.35, "d10": -0.2}, {"name": "深南电路", "d1": 1.79, "d5": 4.01, "d10": 5.82}, {"name": "盛合晶微", "d1": -0.52, "d5": -4.68, "d10": -8.09}, {"name": "芯碁微装", "d1": 0.15, "d5": -1.2, "d10": -0.15}];
+var c1 = echarts.init(document.getElementById('chartSector'));
+c1.setOption({
+  tooltip:{trigger:'axis',axisPointer:{type:'shadow'},formatter:function(p){var d=p[0];return d.name+'<br/>当日主力: '+d.value+' 亿';}},
+  grid:{left:120,right:30,top:10,bottom:20},
+  xAxis:{type:'value',axisLabel:{fontSize:10}},
+  yAxis:{type:'category',data:sectorData.map(function(d){return d.name}),axisLabel:{fontSize:10}},
+  series:[{type:'bar',data:sectorData.map(function(d){return {value:d.v,itemStyle:{color:d.v>=0?'#cf1322':'#389e0d'}}}),
+    label:{show:true,position:'right',fontSize:10,formatter:function(p){return p.value}}}]
+});
+var c2 = echarts.init(document.getElementById('chartStock'));
+c2.setOption({
+  tooltip:{trigger:'axis',axisPointer:{type:'shadow'}},
+  legend:{data:['当日','5日','10日'],top:0},
+  grid:{left:60,right:20,top:30,bottom:60},
+  xAxis:{type:'category',data:stockData.map(function(d){return d.name}),axisLabel:{fontSize:10,rotate:30}},
+  yAxis:{type:'value',axisLabel:{fontSize:10}},
+  series:[
+    {name:'当日',type:'bar',data:stockData.map(function(d){return d.d1}),itemStyle:{color:'#cf1322'}},
+    {name:'5日',type:'bar',data:stockData.map(function(d){return d.d5}),itemStyle:{color:'#d46b08'}},
+    {name:'10日',type:'bar',data:stockData.map(function(d){return d.d10}),itemStyle:{color:'#389e0d'}}
+  ]
+});
+window.addEventListener('resize',function(){c1.resize();c2.resize();});
+</script>
+</body></html>
